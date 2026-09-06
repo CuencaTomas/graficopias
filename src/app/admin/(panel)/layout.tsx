@@ -2,6 +2,8 @@ import { contarPedidos } from "@/lib/adminPedidos";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { CerrarSesionButton } from "@/components/admin/CerrarSesionButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const { activos, entregados } = await contarPedidos();
 
