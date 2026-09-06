@@ -1,0 +1,211 @@
+// ============================================================
+// Modelo de datos — Tienda online gráfica/imprenta
+// Estructura genérica de partida. Se ajusta con los datos reales
+// una vez completada la planilla de precios.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// CATÁLOGO
+// ------------------------------------------------------------
+
+enum TipoCalculo {
+  UNIDAD      // precio por unidad/copia
+  M2          // precio por metro cuadrado
+  ESCALONADO  // precio según tramos de cantidad (ver TramoPrecio)
+}
+
+model Producto {
+  id              String       @id @default(cuid())
+  nombre          String
+  categoria       String?
+  descripcion     String?
+  imagenUrl       String?
+  activo          Boolean      @default(true)
+  tipoCalculo     TipoCalculo
+  precioBase      Decimal      @db.Decimal(12, 2) // usado si tipoCalculo no es ESCALONADO
+  cantidadMinima  Int?         // ej: A4 se vende de a 50
+  creadoEn        DateTime     @default(now())
+  actualizadoEn   DateTime     @updatedAt
+
+  tramosPrecio    TramoPrecio[]
+  opciones        ProductoOpcion[]
+  itemsPedido     ItemPedido[]
+
+  @@index([activo])
+}
+
+// Tramos de precio para productos ESCALONADO (ej: 50u: $8000 | 100u: $14000)
+model TramoPrecio {
+  id              String   @id @default(cuid())
+  productoId      String
+  producto        Producto @relation(fields: [productoId], references: [id])
+  cantidadDesde   Int
+  cantidadHasta   Int?     // null = "en adelante"
+  precioUnitario  Decimal  @db.Decimal(12, 2)
+
+  @@index([productoId])
+}
+
+// Una "característica" elegible: Tipo de papel, Terminación, Tamaño, etc.
+model Opcion {
+  id       String            @id @default(cuid())
+  nombre   String            // ej: "Tipo de papel"
+  valores  ValorOpcion[]
+  productos ProductoOpcion[]
+}
+
+enum TipoModificador {
+  PORCENTAJE  // ej: +15%
+  FIJO        // ej: +$500
+}
+
+// Un valor posible dentro de una opción, con su efecto en el precio
+model ValorOpcion {
+  id                String          @id @default(cuid())
+  opcionId          String
+  opcion            Opcion          @relation(fields: [opcionId], references: [id])
+  nombre            String          // ej: "Papel Ilustración"
+  tipoModificador   TipoModificador
+  valorModificador  Decimal         @db.Decimal(12, 2) // % como 15.00, o monto fijo
+  activo            Boolean         @default(true)
+
+  seleccionesItem   ItemPedidoOpcion[]
+
+  @@index([opcionId])
+}
+
+// Qué opciones aplican a qué producto (muchos a muchos)
+model ProductoOpcion {
+  id          String   @id @default(cuid())
+  productoId  String
+  producto    Producto @relation(fields: [productoId], references: [id])
+  opcionId    String
+  opcion      Opcion   @relation(fields: [opcionId], references: [id])
+  requerida   Boolean  @default(false)
+  orden       Int      @default(0)
+
+  @@unique([productoId, opcionId])
+}
+
+// ------------------------------------------------------------
+// PEDIDOS
+// ------------------------------------------------------------
+
+enum EstadoPedido {
+  PENDIENTE_PAGO
+  SENADO          // seña o total confirmado, entra a la cola
+  EN_PREPARACION
+  COMENZADO
+  TERMINADO
+  ENTREGADO
+  CANCELADO
+}
+
+enum MedioContacto {
+  TELEFONO
+  EMAIL
+}
+
+model Pedido {
+  id              String        @id @default(cuid())
+  nombreCliente   String
+  contacto        String        // teléfono o email, según medioContacto
+  medioContacto   MedioContacto
+  estado          EstadoPedido  @default(PENDIENTE_PAGO)
+  montoTotal      Decimal       @db.Decimal(12, 2)
+  montoSenado     Decimal       @db.Decimal(12, 2) @default(0) // lo efectivamente pagado hasta ahora
+  esPagoTotal     Boolean       @default(false) // false = pagó seña, true = pagó todo
+  notasInternas   String?
+  creadoEn        DateTime      @default(now())
+  actualizadoEn   DateTime      @updatedAt
+  entregadoEn     DateTime?     // se completa al pasar a ENTREGADO -> archivado
+
+  items           ItemPedido[]
+  pagos           Pago[]
+
+  @@index([estado])
+  @@index([entregadoEn])
+}
+
+model ItemPedido {
+  id              String    @id @default(cuid())
+  pedidoId        String
+  pedido          Pedido    @relation(fields: [pedidoId], references: [id])
+  productoId      String
+  producto        Producto  @relation(fields: [productoId], references: [id])
+  cantidad        Int
+  precioCalculado Decimal   @db.Decimal(12, 2) // snapshot del subtotal al momento de comprar
+  quiereDiseno    Boolean   @default(false)
+  comentario      String?   // notas del cliente sobre el diseño/pedido
+
+  opciones        ItemPedidoOpcion[]
+
+  @@index([pedidoId])
+}
+
+// Snapshot de qué valor de opción se eligió y qué modificador tenía
+// en ese momento (para no romper el histórico si el precio cambia después)
+model ItemPedidoOpcion {
+  id                String      @id @default(cuid())
+  itemPedidoId      String
+  itemPedido        ItemPedido  @relation(fields: [itemPedidoId], references: [id])
+  valorOpcionId     String
+  valorOpcion       ValorOpcion @relation(fields: [valorOpcionId], references: [id])
+  modificadorAplicado Decimal   @db.Decimal(12, 2) // valor copiado al momento de la compra
+
+  @@index([itemPedidoId])
+}
+
+// ------------------------------------------------------------
+// PAGOS
+// ------------------------------------------------------------
+
+enum MedioPago {
+  MERCADO_PAGO
+  TRANSFERENCIA   // no usado en v1, preparado para fase 2
+}
+
+enum TipoPago {
+  SENA
+  TOTAL
+}
+
+enum EstadoPago {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+model Pago {
+  id                    String     @id @default(cuid())
+  pedidoId              String
+  pedido                Pedido     @relation(fields: [pedidoId], references: [id])
+  medioPago             MedioPago
+  tipoPago              TipoPago
+  monto                 Decimal    @db.Decimal(12, 2)
+  estado                EstadoPago @default(PENDIENTE)
+
+  // Mercado Pago
+  mpPreferenceId        String?    // id de la preferencia creada
+  mpPaymentId           String?    // id que llega en el webhook al aprobarse
+  mpExternalReference    String?    // referencia enviada = pedidoId, para cruzar en el webhook
+
+  // Transferencia (fase 2 — no usado en v1)
+  comprobanteUrl        String?
+  verificadoPorUsuario  String?
+
+  creadoEn              DateTime   @default(now())
+  actualizadoEn         DateTime   @updatedAt
+
+  @@index([pedidoId])
+  @@index([mpExternalReference])
+}

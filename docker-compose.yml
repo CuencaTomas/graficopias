@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: graficopias-db
+    environment:
+      POSTGRES_USER: graficopias
+      POSTGRES_PASSWORD: graficopias
+      POSTGRES_DB: graficopias
+    ports:
+      - "5432:5432"
+    volumes:
+      - graficopias-db-data:/var/lib/postgresql/data
+
+volumes:
+  graficopias-db-data:
