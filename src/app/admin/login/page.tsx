@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { LoginForm } from "./LoginForm";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminLoginPage() {
   return (
     <div className="flex min-h-full items-center justify-center bg-negro px-4 py-16">
