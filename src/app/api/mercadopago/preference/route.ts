@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     esPagoTotal: pedido.esPagoTotal,
   });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
 
   try {
     const preference = await clientePreference().create({
