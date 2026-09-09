@@ -30,10 +30,25 @@ export function ProductoConfigurador({ producto }: { producto: ProductoDetalle }
   const [quiereDiseno, setQuiereDiseno] = useState(false);
   const [comentario, setComentario] = useState("");
 
-  const cantidadEfectiva = esM2 ? Math.round(ancho * alto * 100) / 100 : cantidad;
+  const areaCalculada = Math.round(ancho * alto * 100) / 100;
+  const cantidadEfectiva = esM2
+    ? Math.max(producto.cantidadMinima ?? 0, areaCalculada)
+    : cantidad;
+
+  const valoresSeleccionadosIds = useMemo(() => new Set(Object.values(seleccion)), [seleccion]);
+
+  // Un grupo sólo es visible si no depende de nada, o si el valor del que
+  // depende está efectivamente elegido en otro grupo (árbol de opciones).
+  const gruposVisibles = useMemo(
+    () =>
+      producto.grupos.filter(
+        (grupo) => !grupo.dependeDeValorOpcionId || valoresSeleccionadosIds.has(grupo.dependeDeValorOpcionId)
+      ),
+    [producto.grupos, valoresSeleccionadosIds]
+  );
 
   const opcionesSeleccionadas = useMemo(() => {
-    return producto.grupos
+    return gruposVisibles
       .map((grupo) => {
         const valorId = seleccion[grupo.opcionId];
         const valor = grupo.valores.find((v) => v.id === valorId);
@@ -45,7 +60,7 @@ export function ProductoConfigurador({ producto }: { producto: ProductoDetalle }
         };
       })
       .filter((v): v is NonNullable<typeof v> => v !== null);
-  }, [seleccion, producto.grupos]);
+  }, [seleccion, gruposVisibles]);
 
   const total = calcularSubtotal(
     { tipoCalculo: producto.tipoCalculo, precioBase: producto.precioBase, tramosPrecio: producto.tramosPrecio },
@@ -63,7 +78,7 @@ export function ProductoConfigurador({ producto }: { producto: ProductoDetalle }
       cantidad: cantidadEfectiva,
       ancho: esM2 ? ancho : null,
       alto: esM2 ? alto : null,
-      opciones: producto.grupos.map((grupo) => {
+      opciones: gruposVisibles.map((grupo) => {
         const valorId = seleccion[grupo.opcionId];
         const valor = grupo.valores.find((v) => v.id === valorId);
         return { grupo: grupo.nombre, valorOpcionId: valorId, valorNombre: valor?.nombre ?? "" };
@@ -88,8 +103,10 @@ export function ProductoConfigurador({ producto }: { producto: ProductoDetalle }
         <div>
           <h1 className="text-2xl font-bold text-negro">{producto.nombre}</h1>
           {producto.descripcion && <p className="mt-1 text-black/60">{producto.descripcion}</p>}
-          {!esM2 && producto.cantidadMinima && (
-            <p className="mt-1 text-sm text-black/50">Mínimo {producto.cantidadMinima} unidades</p>
+          {producto.cantidadMinima && (
+            <p className="mt-1 text-sm text-black/50">
+              Mínimo {producto.cantidadMinima} {esM2 ? "m²" : "unidades"}
+            </p>
           )}
 
           {esM2 ? (
@@ -144,7 +161,7 @@ export function ProductoConfigurador({ producto }: { producto: ProductoDetalle }
             </div>
           )}
 
-          {producto.grupos.map((grupo) => (
+          {gruposVisibles.map((grupo) => (
             <div key={grupo.opcionId} className="mt-6">
               <h2 className="mb-2 font-semibold text-negro">{grupo.nombre}</h2>
               <div className="flex flex-col gap-2">

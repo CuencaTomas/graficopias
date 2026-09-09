@@ -1,8 +1,18 @@
+import Image from "next/image";
+
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-negro">
+      <Image
+        src="/frente-local.jpg"
+        alt="Frente del local Graficopias"
+        fill
+        priority
+        className="object-cover"
+      />
+      <div className="absolute inset-0 bg-negro/70" aria-hidden="true" />
       <div
-        className="pointer-events-none absolute -right-24 -top-24 h-[140%] w-2/3 rotate-12 bg-rojo"
+        className="pointer-events-none absolute -right-24 -top-24 h-[140%] w-2/3 rotate-12 bg-rojo/80"
         aria-hidden="true"
       />
       <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">

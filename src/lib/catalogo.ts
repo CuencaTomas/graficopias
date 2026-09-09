@@ -57,6 +57,7 @@ export async function obtenerProductoConOpciones(id: string) {
       opcionId: po.opcion.id,
       nombre: po.opcion.nombre,
       requerida: po.requerida,
+      dependeDeValorOpcionId: po.dependeDeValorOpcionId,
       valores: po.opcion.valores.map((v) => ({
         id: v.id,
         nombre: v.nombre,

@@ -79,6 +79,7 @@ model ValorOpcion {
   activo            Boolean         @default(true)
 
   seleccionesItem   ItemPedidoOpcion[]
+  gruposQueDependen ProductoOpcion[]
 
   @@index([opcionId])
 }
@@ -93,7 +94,14 @@ model ProductoOpcion {
   requerida   Boolean  @default(false)
   orden       Int      @default(0)
 
+  // Si se setea, este grupo de opciones sólo se muestra cuando el cliente
+  // eligió este valor puntual en otro grupo del mismo producto (permite
+  // armar árboles de opciones: ej. "Troquelado" habilita "Tipo de troquelado").
+  dependeDeValorOpcionId String?
+  dependeDeValorOpcion   ValorOpcion? @relation(fields: [dependeDeValorOpcionId], references: [id])
+
   @@unique([productoId, opcionId])
+  @@index([dependeDeValorOpcionId])
 }
 
 // ------------------------------------------------------------
