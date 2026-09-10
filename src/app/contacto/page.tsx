@@ -15,10 +15,12 @@ const ENLACES = [
   {
     nombre: "Instagram",
     href: "https://www.instagram.com/graficopias10/",
-    color: "bg-gradient-to-br from-[#feda75] via-[#d62976] to-[#4f5bd5] hover:brightness-110",
+    color: "bg-[#E4405F] hover:bg-[#cc3752]",
     icono: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
-        <path d="M12 2c-2.72 0-3.06.01-4.12.06-1.06.05-1.79.22-2.43.47a4.92 4.92 0 0 0-1.78 1.16A4.92 4.92 0 0 0 2.53 5.47c-.25.64-.42 1.37-.47 2.43C2.01 8.96 2 9.3 2 12s.01 3.04.06 4.1c.05 1.06.22 1.79.47 2.43a4.92 4.92 0 0 0 1.16 1.78 4.92 4.92 0 0 0 1.78 1.16c.64.25 1.37.42 2.43.47 1.06.05 1.4.06 4.1.06s3.04-.01 4.1-.06c1.06-.05 1.79-.22 2.43-.47a4.92 4.92 0 0 0 1.78-1.16 4.92 4.92 0 0 0 1.16-1.78c.25-.64.42-1.37.47-2.43.05-1.06.06-1.4.06-4.1s-.01-3.04-.06-4.1c-.05-1.06-.22-1.79-.47-2.43a4.92 4.92 0 0 0-1.16-1.78A4.92 4.92 0 0 0 18.56.53c-.64-.25-1.37-.42-2.43-.47C15.06.01 14.72 0 12 0Zm0 5.84A6.16 6.16 0 1 1 5.84 12 6.16 6.16 0 0 1 12 5.84ZM12 16a4 4 0 1 1 4-4 4 4 0 0 1-4 4Zm6.4-11.85a1.44 1.44 0 1 1-1.44 1.44 1.44 1.44 0 0 1 1.44-1.44Z" />
+      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="5" />
+        <circle cx="12" cy="12" r="4.2" />
+        <circle cx="17.4" cy="6.6" r="0.9" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
