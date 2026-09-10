@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { TipoCalculo } from "@prisma/client";
 import { IconoPlaceholder } from "./ImagenProducto";
+import { LightboxImagen } from "./LightboxImagen";
 
 export function CarruselImagenes({
   imagenesUrl,
@@ -15,6 +16,7 @@ export function CarruselImagenes({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activa, setActiva] = useState(0);
+  const [lightboxAbierto, setLightboxAbierto] = useState(false);
 
   if (imagenesUrl.length === 0) {
     return <IconoPlaceholder tipoCalculo={tipoCalculo} className={className} />;
@@ -41,13 +43,17 @@ export function CarruselImagenes({
         onScroll={alScrollear}
         className="flex h-full snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {imagenesUrl.map((url) => (
+        {imagenesUrl.map((url, i) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={url}
             src={url}
             alt=""
-            className="h-full w-full flex-shrink-0 snap-start object-cover"
+            onClick={() => {
+              setActiva(i);
+              setLightboxAbierto(true);
+            }}
+            className="h-full w-full flex-shrink-0 cursor-zoom-in snap-start object-cover"
           />
         ))}
       </div>
@@ -66,6 +72,15 @@ export function CarruselImagenes({
             />
           ))}
         </div>
+      )}
+
+      {lightboxAbierto && (
+        <LightboxImagen
+          imagenesUrl={imagenesUrl}
+          indice={activa}
+          onCerrar={() => setLightboxAbierto(false)}
+          onCambiar={setActiva}
+        />
       )}
     </div>
   );
