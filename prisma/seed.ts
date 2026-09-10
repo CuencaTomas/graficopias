@@ -17,7 +17,7 @@ type ProductoInput = {
   nombre: string;
   categoria: "Imprenta" | "Gráfica";
   descripcion?: string;
-  imagenUrl?: string;
+  imagenesUrl?: string[];
   tipoCalculo: TipoCalculo;
   precioBase: number;
   cantidadMinima?: number;
@@ -67,7 +67,7 @@ async function crearProducto(input: ProductoInput) {
       nombre: input.nombre,
       categoria: input.categoria,
       descripcion: input.descripcion,
-      imagenUrl: input.imagenUrl,
+      imagenesUrl: input.imagenesUrl ?? [],
       tipoCalculo: input.tipoCalculo,
       precioBase: input.precioBase,
       cantidadMinima: input.cantidadMinima,
@@ -135,7 +135,7 @@ async function main() {
     nombre: "Impresión A4",
     categoria: "Imprenta",
     descripcion: "Impresión por carilla A4, papel común o especial.",
-    imagenUrl: "/productos/adhesivo.jpg",
+    imagenesUrl: ["/productos/adhesivo.jpg"],
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 100,
     cantidadMinima: 1,
@@ -167,7 +167,7 @@ async function main() {
     nombre: "Impresión A3",
     categoria: "Imprenta",
     descripcion: "Impresión por carilla A3 en papeles especiales.",
-    imagenUrl: "/productos/adhesivo.jpg",
+    imagenesUrl: ["/productos/adhesivo.jpg"],
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 1600,
     cantidadMinima: 1,
@@ -196,7 +196,7 @@ async function main() {
     nombre: "Tarjetas personales 5x9",
     categoria: "Imprenta",
     descripcion: "Tarjetas 5x9, pedido mínimo 100 unidades.",
-    imagenUrl: "/productos/tarjetas.jpg",
+    imagenesUrl: ["/productos/tarjetas.jpg"],
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 120,
     cantidadMinima: 100,
@@ -220,6 +220,7 @@ async function main() {
     nombre: "Vinilo de corte",
     categoria: "Gráfica",
     descripcion: "Rollo de 58cm de ancho — precio por metro lineal.",
+    imagenesUrl: ["/productos/vinilo-de-corte.jpg", "/productos/vinilo-mate.png"],
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 30000,
     cantidadMinima: 1,
@@ -230,7 +231,7 @@ async function main() {
     nombre: "Vinilo impreso",
     categoria: "Gráfica",
     descripcion: "Vinilo impreso por metro cuadrado.",
-    imagenUrl: "/productos/vinilo-impreso.jpg",
+    imagenesUrl: ["/productos/vinilo-impreso.jpg"],
     tipoCalculo: TipoCalculo.M2,
     precioBase: 18000,
     grupos: [
@@ -248,22 +249,11 @@ async function main() {
   });
 
   await crearProducto({
-    id: "grafica-figura-troquelada",
-    nombre: "Figuras troqueladas",
-    categoria: "Gráfica",
-    descripcion:
-      "Figuras y personajes troquelados a medida (ej: muñecos, carteles con silueta). Precio a confirmar según diseño.",
-    imagenUrl: "/productos/figura-troquelada.jpg",
-    tipoCalculo: TipoCalculo.UNIDAD,
-    precioBase: 0,
-    cantidadMinima: 1,
-  });
-
-  await crearProducto({
     id: "grafica-lona",
     nombre: "Lona",
     categoria: "Gráfica",
     descripcion: "Lona por metro cuadrado. Mínimo 1 m², después se cobra la proporción exacta.",
+    imagenesUrl: ["/productos/lona.jpg"],
     tipoCalculo: TipoCalculo.M2,
     precioBase: 18000,
     cantidadMinima: 1,
@@ -283,6 +273,7 @@ async function main() {
     nombre: "Papel para gigantografía",
     categoria: "Gráfica",
     descripcion: "Papel para gigantografía por metro cuadrado.",
+    imagenesUrl: ["/productos/gigantografia.jpg"],
     tipoCalculo: TipoCalculo.M2,
     precioBase: 10000,
     grupos: [
@@ -302,6 +293,7 @@ async function main() {
     nombre: "Cartel corrugado",
     categoria: "Gráfica",
     descripcion: "Cartel de corrugado en tamaños estándar.",
+    imagenesUrl: ["/productos/cartel-corrugado.jpg", "/productos/cartel-corrugado.png"],
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 30000,
     cantidadMinima: 1,
@@ -318,9 +310,10 @@ async function main() {
 
   await crearProducto({
     id: "grafica-cartel-pvc",
-    nombre: "Cartel PVC 2,40 x 1,20m",
+    nombre: "Cartel PVC",
     categoria: "Gráfica",
     descripcion: "Cartel de PVC en tamaño estándar 2,40 x 1,20m.",
+    imagenesUrl: ["/productos/figura-troquelada.jpg"],
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 240000,
     cantidadMinima: 1,
@@ -328,9 +321,10 @@ async function main() {
 
   await crearProducto({
     id: "grafica-cartel-pai",
-    nombre: "Cartel PAI 2 x 1m",
+    nombre: "Cartel PAI",
     categoria: "Gráfica",
     descripcion: "Cartel de PAI en tamaño estándar 2 x 1m.",
+    imagenesUrl: ["/productos/cartel-pai.webp"],
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 80000,
     cantidadMinima: 1,
@@ -341,7 +335,7 @@ async function main() {
     nombre: "Bastidor",
     categoria: "Gráfica",
     descripcion: "Bastidor armado por metro cuadrado.",
-    imagenUrl: "/productos/bastidor.jpg",
+    imagenesUrl: ["/productos/bastidor.jpg"],
     tipoCalculo: TipoCalculo.M2,
     precioBase: 50000,
     grupos: [

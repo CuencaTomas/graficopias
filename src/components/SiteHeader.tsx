@@ -16,9 +16,9 @@ export function SiteHeader() {
           <Link href="/#catalogo" className="hover:text-rojo">
             Productos
           </Link>
-          <a href="https://wa.me/5491126695842" target="_blank" rel="noreferrer" className="hover:text-rojo">
+          <Link href="/contacto" className="hover:text-rojo">
             Contacto
-          </a>
+          </Link>
         </nav>
       </div>
     </header>

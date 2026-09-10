@@ -11,7 +11,7 @@ export function ProductoCard({ producto }: { producto: ProductoCatalogo }) {
     >
       <ImagenProducto
         tipoCalculo={producto.tipoCalculo}
-        imagenUrl={producto.imagenUrl}
+        imagenesUrl={producto.imagenesUrl}
         className="h-36 w-full"
       />
       <div className="flex flex-col gap-1 p-4">

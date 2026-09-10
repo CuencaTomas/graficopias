@@ -28,7 +28,7 @@ model Producto {
   nombre          String
   categoria       String?
   descripcion     String?
-  imagenUrl       String?
+  imagenesUrl     String[]     @default([])
   activo          Boolean      @default(true)
   tipoCalculo     TipoCalculo
   precioBase      Decimal      @db.Decimal(12, 2) // usado si tipoCalculo no es ESCALONADO

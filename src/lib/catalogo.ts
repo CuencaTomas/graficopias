@@ -18,7 +18,7 @@ export async function obtenerProductosActivos() {
       nombre: p.nombre,
       categoria: p.categoria,
       descripcion: p.descripcion,
-      imagenUrl: p.imagenUrl,
+      imagenesUrl: p.imagenesUrl,
       tipoCalculo: p.tipoCalculo,
       precioDesde,
     };
@@ -44,7 +44,7 @@ export async function obtenerProductoConOpciones(id: string) {
     nombre: producto.nombre,
     categoria: producto.categoria,
     descripcion: producto.descripcion,
-    imagenUrl: producto.imagenUrl,
+    imagenesUrl: producto.imagenesUrl,
     tipoCalculo: producto.tipoCalculo,
     precioBase: Number(producto.precioBase),
     cantidadMinima: producto.cantidadMinima,

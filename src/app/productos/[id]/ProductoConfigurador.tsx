@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { calcularSubtotal } from "@/lib/pricing";
 import { formatearPrecio } from "@/lib/format";
 import type { ProductoDetalle } from "@/lib/catalogo";
-import { ImagenProducto } from "@/components/ImagenProducto";
+import { CarruselImagenes } from "@/components/CarruselImagenes";
 
 function etiquetaModificador(tipo: "PORCENTAJE" | "FIJO", valor: number): string {
   if (valor === 0) return "Sin cargo";
@@ -94,10 +94,10 @@ export function ProductoConfigurador({ producto }: { producto: ProductoDetalle }
   return (
     <div className="mx-auto w-full max-w-4xl px-4 pb-28 pt-6 sm:pb-10">
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-        <ImagenProducto
+        <CarruselImagenes
           tipoCalculo={producto.tipoCalculo}
-          imagenUrl={producto.imagenUrl}
-          className="h-64 w-full rounded-xl sm:h-80"
+          imagenesUrl={producto.imagenesUrl}
+          className="h-64 w-full sm:h-80"
         />
 
         <div>

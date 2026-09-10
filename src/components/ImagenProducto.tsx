@@ -33,25 +33,30 @@ const ICONOS: Record<TipoCalculo, () => React.ReactElement> = {
   ESCALONADO: IconoTramos,
 };
 
-export function ImagenProducto({
-  tipoCalculo,
-  imagenUrl,
-  className,
-}: {
-  tipoCalculo: TipoCalculo;
-  imagenUrl?: string | null;
-  className?: string;
-}) {
-  if (imagenUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={imagenUrl} alt="" className={className} />;
-  }
-
+export function IconoPlaceholder({ tipoCalculo, className }: { tipoCalculo: TipoCalculo; className?: string }) {
   const Icono = ICONOS[tipoCalculo];
-
   return (
     <div className={`flex items-center justify-center bg-black/5 text-black/30 ${className ?? ""}`}>
       <Icono />
     </div>
   );
+}
+
+export function ImagenProducto({
+  tipoCalculo,
+  imagenesUrl,
+  className,
+}: {
+  tipoCalculo: TipoCalculo;
+  imagenesUrl?: string[] | null;
+  className?: string;
+}) {
+  const primera = imagenesUrl?.[0];
+
+  if (primera) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={primera} alt="" className={className} />;
+  }
+
+  return <IconoPlaceholder tipoCalculo={tipoCalculo} className={className} />;
 }
