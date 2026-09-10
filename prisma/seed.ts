@@ -3,7 +3,14 @@ import { PrismaClient, TipoCalculo, TipoModificador } from "@prisma/client";
 const prisma = new PrismaClient();
 
 type ValorOpcionInput = { nombre: string; modificador: number };
-type GrupoOpcionesInput = { nombre: string; valores: ValorOpcionInput[] };
+
+type GrupoOpcionesInput = {
+  nombre: string;
+  valores: ValorOpcionInput[];
+  // Si se setea, este grupo sólo aparece cuando el cliente eligió "valor"
+  // dentro del grupo llamado "grupoNombre" (que debe venir antes en la lista).
+  dependeDe?: { grupoNombre: string; valor: string };
+};
 
 type ProductoInput = {
   id: string;
@@ -14,32 +21,47 @@ type ProductoInput = {
   tipoCalculo: TipoCalculo;
   precioBase: number;
   cantidadMinima?: number;
-  grupoOpciones?: GrupoOpcionesInput;
+  grupos?: GrupoOpcionesInput[];
   tramosPrecio?: { cantidadDesde: number; cantidadHasta: number | null; precioUnitario: number }[];
 };
 
+/**
+ * Árbol de opciones "Troquelado + Laminado", reutilizable en cualquier
+ * producto. Importante: Laminado es SIEMPRE una opción independiente (algo
+ * puede laminarse sin troquelarse) — sólo "Tipo de troquelado" depende de
+ * haber elegido "Con troquelado".
+ */
+function gruposTroqueladoYLaminado(precioTroquelado: number, precioLaminado: number): GrupoOpcionesInput[] {
+  return [
+    {
+      nombre: "Troquelado",
+      valores: [
+        { nombre: "Sin troquelar", modificador: 0 },
+        { nombre: "Con troquelado", modificador: precioTroquelado },
+      ],
+    },
+    {
+      nombre: "Tipo de troquelado",
+      dependeDe: { grupoNombre: "Troquelado", valor: "Con troquelado" },
+      valores: [
+        { nombre: "Despuntillado", modificador: 0 },
+        { nombre: "Sin despuntillar", modificador: 0 },
+        { nombre: "Cortado por plancha", modificador: 0 },
+        { nombre: "Por unidad", modificador: 0 },
+      ],
+    },
+    {
+      nombre: "Laminado",
+      valores: [
+        { nombre: "Sin laminar", modificador: 0 },
+        { nombre: "Laminado", modificador: precioLaminado },
+      ],
+    },
+  ];
+}
+
 async function crearProducto(input: ProductoInput) {
-  let opcionesCreate:
-    | { create: { opcionId: string; requerida: boolean; orden: number }[] }
-    | undefined;
-
-  if (input.grupoOpciones) {
-    const opcion = await prisma.opcion.create({
-      data: {
-        nombre: input.grupoOpciones.nombre,
-        valores: {
-          create: input.grupoOpciones.valores.map((v) => ({
-            nombre: v.nombre,
-            tipoModificador: TipoModificador.FIJO,
-            valorModificador: v.modificador,
-          })),
-        },
-      },
-    });
-    opcionesCreate = { create: [{ opcionId: opcion.id, requerida: true, orden: 0 }] };
-  }
-
-  await prisma.producto.create({
+  const producto = await prisma.producto.create({
     data: {
       id: input.id,
       nombre: input.nombre,
@@ -49,104 +71,44 @@ async function crearProducto(input: ProductoInput) {
       tipoCalculo: input.tipoCalculo,
       precioBase: input.precioBase,
       cantidadMinima: input.cantidadMinima,
-      opciones: opcionesCreate,
       tramosPrecio: input.tramosPrecio ? { create: input.tramosPrecio } : undefined,
     },
   });
-}
 
-async function crearViniloImpreso() {
-  const producto = await prisma.producto.create({
-    data: {
-      id: "grafica-vinilo-impreso",
-      nombre: "Vinilo impreso",
-      categoria: "Gráfica",
-      descripcion: "Vinilo impreso por metro cuadrado.",
-      imagenUrl: "/productos/vinilo-impreso.jpg",
-      tipoCalculo: TipoCalculo.M2,
-      precioBase: 18000,
-    },
-  });
+  const gruposCreados: { nombre: string; valores: { id: string; nombre: string }[] }[] = [];
 
-  const acabado = await prisma.opcion.create({
-    data: {
-      nombre: "Acabado",
-      valores: {
-        create: [
-          { nombre: "Brillo", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-          { nombre: "Mate", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-        ],
+  for (const [i, def] of (input.grupos ?? []).entries()) {
+    const opcion = await prisma.opcion.create({
+      data: {
+        nombre: def.nombre,
+        valores: {
+          create: def.valores.map((v) => ({
+            nombre: v.nombre,
+            tipoModificador: TipoModificador.FIJO,
+            valorModificador: v.modificador,
+          })),
+        },
       },
-    },
-  });
-  await prisma.productoOpcion.create({
-    data: { productoId: producto.id, opcionId: acabado.id, requerida: true, orden: 0 },
-  });
+      include: { valores: true },
+    });
+    gruposCreados.push({ nombre: def.nombre, valores: opcion.valores });
 
-  const troquelado = await prisma.opcion.create({
-    data: {
-      nombre: "Troquelado",
-      valores: {
-        create: [
-          { nombre: "Sin troquelar", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-          { nombre: "Con troquelado", tipoModificador: TipoModificador.FIJO, valorModificador: 2000 },
-        ],
-      },
-    },
-    include: { valores: true },
-  });
-  await prisma.productoOpcion.create({
-    data: { productoId: producto.id, opcionId: troquelado.id, requerida: true, orden: 1 },
-  });
-  const conTroquelado = troquelado.valores.find((v) => v.nombre === "Con troquelado")!;
+    let dependeDeValorOpcionId: string | undefined;
+    if (def.dependeDe) {
+      const grupoDep = gruposCreados.find((g) => g.nombre === def.dependeDe!.grupoNombre);
+      dependeDeValorOpcionId = grupoDep?.valores.find((v) => v.nombre === def.dependeDe!.valor)?.id;
+    }
 
-  // Sub-tipo de troquelado: sólo aparece si se elige "Con troquelado".
-  // TODO: modificadores en $0 — falta el precio real de cada tipo.
-  const tipoTroquelado = await prisma.opcion.create({
-    data: {
-      nombre: "Tipo de troquelado",
-      valores: {
-        create: [
-          { nombre: "Despuntillado", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-          { nombre: "Sin despuntillar", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-          { nombre: "Cortado por plancha", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-          { nombre: "Por unidad", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-        ],
+    await prisma.productoOpcion.create({
+      data: {
+        productoId: producto.id,
+        opcionId: opcion.id,
+        requerida: true,
+        orden: i,
+        dependeDeValorOpcionId,
       },
-    },
-  });
-  await prisma.productoOpcion.create({
-    data: {
-      productoId: producto.id,
-      opcionId: tipoTroquelado.id,
-      requerida: true,
-      orden: 2,
-      dependeDeValorOpcionId: conTroquelado.id,
-    },
-  });
-
-  // Laminado: también depende de "Con troquelado". +10000 sobre troquelado
-  // simple para llegar a los $30000 de "troquelado + laminado" original.
-  const laminado = await prisma.opcion.create({
-    data: {
-      nombre: "Laminado",
-      valores: {
-        create: [
-          { nombre: "Sin laminar", tipoModificador: TipoModificador.FIJO, valorModificador: 0 },
-          { nombre: "Laminado", tipoModificador: TipoModificador.FIJO, valorModificador: 10000 },
-        ],
-      },
-    },
-  });
-  await prisma.productoOpcion.create({
-    data: {
-      productoId: producto.id,
-      opcionId: laminado.id,
-      requerida: true,
-      orden: 3,
-      dependeDeValorOpcionId: conTroquelado.id,
-    },
-  });
+    });
+  }
 }
 
 async function limpiarDatos() {
@@ -177,23 +139,27 @@ async function main() {
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 100,
     cantidadMinima: 1,
-    grupoOpciones: {
-      nombre: "Tipo de papel / impresión",
-      valores: [
-        { nombre: "Blanco y negro (papel común)", modificador: 0 },
-        { nombre: "Color inkjet (papel común)", modificador: 100 },
-        { nombre: "Láser (papel común)", modificador: 400 },
-        { nombre: "150gr Brillo", modificador: 700 },
-        { nombre: "150gr Mate", modificador: 700 },
-        { nombre: "Opalina 240gr", modificador: 900 },
-        { nombre: "300gr Brillo", modificador: 1400 },
-        { nombre: "300gr Mate", modificador: 1400 },
-        { nombre: "Autoadhesivo Brillo", modificador: 1400 },
-        { nombre: "Autoadhesivo Mate", modificador: 1400 },
-        { nombre: "Kraft Fino", modificador: 700 },
-        { nombre: "Kraft Grueso", modificador: 1400 },
-      ],
-    },
+    grupos: [
+      {
+        nombre: "Tipo de papel / impresión",
+        valores: [
+          { nombre: "Blanco y negro (papel común)", modificador: 0 },
+          { nombre: "Color inkjet (papel común)", modificador: 100 },
+          { nombre: "Láser (papel común)", modificador: 400 },
+          { nombre: "150gr Brillo", modificador: 700 },
+          { nombre: "150gr Mate", modificador: 700 },
+          { nombre: "Opalina 240gr", modificador: 900 },
+          { nombre: "300gr Brillo", modificador: 1400 },
+          { nombre: "300gr Mate", modificador: 1400 },
+          { nombre: "Autoadhesivo Brillo", modificador: 1400 },
+          { nombre: "Autoadhesivo Mate", modificador: 1400 },
+          { nombre: "Kraft Fino", modificador: 700 },
+          { nombre: "Kraft Grueso", modificador: 1400 },
+        ],
+      },
+      // TODO: precios de troquelado/laminado para A4 a confirmar (van en $0).
+      ...gruposTroqueladoYLaminado(0, 0),
+    ],
   });
 
   await crearProducto({
@@ -205,20 +171,24 @@ async function main() {
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 1600,
     cantidadMinima: 1,
-    grupoOpciones: {
-      nombre: "Tipo de papel",
-      valores: [
-        { nombre: "150gr Brillo", modificador: 0 },
-        { nombre: "150gr Mate", modificador: 0 },
-        { nombre: "Opalina 240gr", modificador: 400 },
-        { nombre: "300gr Brillo", modificador: 1400 },
-        { nombre: "300gr Mate", modificador: 1400 },
-        { nombre: "Autoadhesivo Brillo", modificador: 1400 },
-        { nombre: "Autoadhesivo Mate", modificador: 1400 },
-        { nombre: "Kraft Fino", modificador: 0 },
-        { nombre: "Kraft Grueso", modificador: 1400 },
-      ],
-    },
+    grupos: [
+      {
+        nombre: "Tipo de papel",
+        valores: [
+          { nombre: "150gr Brillo", modificador: 0 },
+          { nombre: "150gr Mate", modificador: 0 },
+          { nombre: "Opalina 240gr", modificador: 400 },
+          { nombre: "300gr Brillo", modificador: 1400 },
+          { nombre: "300gr Mate", modificador: 1400 },
+          { nombre: "Autoadhesivo Brillo", modificador: 1400 },
+          { nombre: "Autoadhesivo Mate", modificador: 1400 },
+          { nombre: "Kraft Fino", modificador: 0 },
+          { nombre: "Kraft Grueso", modificador: 1400 },
+        ],
+      },
+      // TODO: precios de troquelado/laminado para A3 a confirmar (van en $0).
+      ...gruposTroqueladoYLaminado(0, 0),
+    ],
   });
 
   await crearProducto({
@@ -230,23 +200,15 @@ async function main() {
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 120,
     cantidadMinima: 100,
-    grupoOpciones: {
-      nombre: "Faz",
-      valores: [
-        { nombre: "Simple faz", modificador: 0 },
-        { nombre: "Doble faz", modificador: 60 },
-      ],
-    },
-  });
-
-  await crearProducto({
-    id: "imprenta-adhesivo-a3",
-    nombre: "Adhesivo A3 troquelado",
-    categoria: "Imprenta",
-    descripcion: "Hoja de adhesivos A3 troquelados a medida.",
-    tipoCalculo: TipoCalculo.UNIDAD,
-    precioBase: 5000,
-    cantidadMinima: 1,
+    grupos: [
+      {
+        nombre: "Faz",
+        valores: [
+          { nombre: "Simple faz", modificador: 0 },
+          { nombre: "Doble faz", modificador: 60 },
+        ],
+      },
+    ],
   });
 
   // ------------------------------------------------------------
@@ -263,11 +225,27 @@ async function main() {
     cantidadMinima: 1,
   });
 
-  // "Vinilo impreso" es un árbol de opciones: Acabado siempre visible;
-  // "Troquelado" siempre visible; recién si se elige "Con troquelado" se
-  // despliegan "Tipo de troquelado" y "¿Laminado?". Los sub-tipos de
-  // troquelado quedan en $0 hasta tener el precio real de cada uno.
-  await crearViniloImpreso();
+  await crearProducto({
+    id: "grafica-vinilo-impreso",
+    nombre: "Vinilo impreso",
+    categoria: "Gráfica",
+    descripcion: "Vinilo impreso por metro cuadrado.",
+    imagenUrl: "/productos/vinilo-impreso.jpg",
+    tipoCalculo: TipoCalculo.M2,
+    precioBase: 18000,
+    grupos: [
+      {
+        nombre: "Acabado",
+        valores: [
+          { nombre: "Brillo", modificador: 0 },
+          { nombre: "Mate", modificador: 0 },
+        ],
+      },
+      // Precios reales de la planilla: troquelado +2000, laminado +10000
+      // (troquelado + laminado = +12000 = $30000 total).
+      ...gruposTroqueladoYLaminado(2000, 10000),
+    ],
+  });
 
   await crearProducto({
     id: "grafica-figura-troquelada",
@@ -289,13 +267,15 @@ async function main() {
     tipoCalculo: TipoCalculo.M2,
     precioBase: 18000,
     cantidadMinima: 1,
-    grupoOpciones: {
-      nombre: "Acabado",
-      valores: [
-        { nombre: "Brillo", modificador: 0 },
-        { nombre: "Mate", modificador: 0 },
-      ],
-    },
+    grupos: [
+      {
+        nombre: "Acabado",
+        valores: [
+          { nombre: "Brillo", modificador: 0 },
+          { nombre: "Mate", modificador: 0 },
+        ],
+      },
+    ],
   });
 
   await crearProducto({
@@ -305,14 +285,16 @@ async function main() {
     descripcion: "Papel para gigantografía por metro cuadrado.",
     tipoCalculo: TipoCalculo.M2,
     precioBase: 10000,
-    grupoOpciones: {
-      nombre: "Tipo de papel",
-      valores: [
-        { nombre: "Obra", modificador: 0 },
-        { nombre: "City", modificador: 15000 },
-        { nombre: "Foto", modificador: 15000 },
-      ],
-    },
+    grupos: [
+      {
+        nombre: "Tipo de papel",
+        valores: [
+          { nombre: "Obra", modificador: 0 },
+          { nombre: "City", modificador: 15000 },
+          { nombre: "Foto", modificador: 15000 },
+        ],
+      },
+    ],
   });
 
   await crearProducto({
@@ -323,13 +305,15 @@ async function main() {
     tipoCalculo: TipoCalculo.UNIDAD,
     precioBase: 30000,
     cantidadMinima: 1,
-    grupoOpciones: {
-      nombre: "Tamaño",
-      valores: [
-        { nombre: "1 x 0,70m", modificador: 0 },
-        { nombre: "2 x 1m", modificador: 40000 },
-      ],
-    },
+    grupos: [
+      {
+        nombre: "Tamaño",
+        valores: [
+          { nombre: "1 x 0,70m", modificador: 0 },
+          { nombre: "2 x 1m", modificador: 40000 },
+        ],
+      },
+    ],
   });
 
   await crearProducto({
@@ -360,13 +344,15 @@ async function main() {
     imagenUrl: "/productos/bastidor.jpg",
     tipoCalculo: TipoCalculo.M2,
     precioBase: 50000,
-    grupoOpciones: {
-      nombre: "Material",
-      valores: [
-        { nombre: "Madera", modificador: 0 },
-        { nombre: "Hierro", modificador: 30000 },
-      ],
-    },
+    grupos: [
+      {
+        nombre: "Material",
+        valores: [
+          { nombre: "Madera", modificador: 0 },
+          { nombre: "Hierro", modificador: 30000 },
+        ],
+      },
+    ],
   });
 
   await crearProducto({
@@ -376,14 +362,16 @@ async function main() {
     descripcion: "Terminaciones para impresiones de gran formato, por metro cuadrado.",
     tipoCalculo: TipoCalculo.M2,
     precioBase: 25000,
-    grupoOpciones: {
-      nombre: "Tipo",
-      valores: [
-        { nombre: "Esmerilado impreso", modificador: 0 },
-        { nombre: "Microperforado", modificador: 0 },
-        { nombre: "Holográfico troquelado", modificador: 35000 },
-      ],
-    },
+    grupos: [
+      {
+        nombre: "Tipo",
+        valores: [
+          { nombre: "Esmerilado impreso", modificador: 0 },
+          { nombre: "Microperforado", modificador: 0 },
+          { nombre: "Holográfico troquelado", modificador: 35000 },
+        ],
+      },
+    ],
   });
 
   const total = await prisma.producto.count();

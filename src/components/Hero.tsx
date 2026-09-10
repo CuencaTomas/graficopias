@@ -11,10 +11,6 @@ export function Hero() {
         className="object-cover"
       />
       <div className="absolute inset-0 bg-negro/70" aria-hidden="true" />
-      <div
-        className="pointer-events-none absolute -right-24 -top-24 h-[140%] w-2/3 rotate-12 bg-rojo/80"
-        aria-hidden="true"
-      />
       <div className="relative mx-auto max-w-6xl px-4 py-14 sm:py-20">
         <h1 className="max-w-md text-3xl font-bold text-blanco sm:text-4xl">
           Gráfica digital y gran formato
