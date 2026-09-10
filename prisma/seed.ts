@@ -354,6 +354,11 @@ async function main() {
     nombre: "Terminaciones especiales",
     categoria: "Gráfica",
     descripcion: "Terminaciones para impresiones de gran formato, por metro cuadrado.",
+    imagenesUrl: [
+      "/productos/esmerilado-impreso.jpg",
+      "/productos/microperforado.webp",
+      "/productos/holografico-troquelado.jpg",
+    ],
     tipoCalculo: TipoCalculo.M2,
     precioBase: 25000,
     grupos: [
